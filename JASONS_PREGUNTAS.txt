@@ -1,0 +1,249 @@
+
+1)¿QUE TIPO DE PRODUCTOS ESTAN REGISTRADOS?   TABLA products.csv
+{
+ project: {
+  _id: 0,
+  productName: 1
+ }
+}
+____________________________________________________________________
+
+2)¿CUALES SON LAS CATEGORIAS DE LOS PRODUCTOS? TABLA categories.csv
+{
+ project: {
+  _ID: 0,
+  categoryID: 1,
+  categoryName: 1
+ }
+}
+___________________________________________________________________
+
+
+3)¿CUALES SON LOS PROVEEDORES DE LOS PRODUCTOS? TABLA suppliers.csv
+
+{
+ project: {
+  _id: 0,
+  supplierID: 1,
+  companyName: 1,
+  country: 1
+ }
+}
+
+___________________________________________________________________
+
+4) select unitPrice, quantityPerUnit, unitsInStock from products order by unitsInStock desc;
+
+{
+ project: {
+  _id: 0,
+  quantityPerUnit: 1,
+  unitsInStock: 1
+ },
+ sort: {
+  unitsInStock: -1
+ }
+}
+
+5) select productName, quantityPerUnit, CompanyName, city, phone
+   from products as pr
+   join suppliers as sup
+   on sup.supplierID = pr.supplierID;
+
+[{$lookup: {
+  from: 'suppliers',
+  localField: 'supplierID',
+  foreignField: 'supplierID',
+  as: 'products_suppliers'
+}}]
+
+
+
+____________________________________________________________
+
+
+6)PRODUCTOS QUE CONTENGAN LA PALABRA %UA% y mayores unidades en stock  TABLA products.csv
+
+{
+ filter: {
+  productName: RegExp('ua', i)
+ },
+ project: {
+  _id: 0,
+  productName: 1,
+  productID: 1,
+  unitsInStock: 1
+ },
+ sort: {
+  unitsInStock: -1
+ }
+}
+
+______________________________________________________________________________
+
+7) Select shipCountry from orders where shipCountry like "%a";
+
+{
+ filter: {
+  shipCountry: RegExp('a', i)
+ },
+ project: {
+  _id: 0,
+  shipCountry: 1
+ }
+}
+___________________________________________________________________________
+
+8)CALCULA LA SUMA Y PROMEDIO DE LOS PRECIOS UNITARIOS y CANTIDADES DE LAS ORDENES TABLA order_details.csv
+
+[{$project: {
+_id:0, orderID:1,unitPrice:1, quantity:1
+}}, {$group: {
+  _id: {OrderID: "$orderID"},
+  Quantity: {$sum: "$quantity"},
+  Promedio_precio_unidades:{$avg: "$unitPrice"},
+}}, {$sort: {
+  Quantity: -1
+}}]
+
+___________________________________________________________________________
+
+9)select max(discount), min(unitPrice), count(quantity) from order_details;
+
+[{$group: {
+  _id: '$orderID',
+  maxdiscountorder: {
+    $max: '$discount'
+  },
+  mindiscountorder: {
+    $min: '$unitPrice'
+  },
+  cantidad_productos: {
+    $sum: '$quantity'
+  },
+  promedio_precios: {
+    $avg: '$unitPrice'
+  }
+}}, {$sort: {
+  cuenta_productos: 1
+}}, {$limit: 50}]
+__________________________________________________________________________
+
+10)select companyName, city, shippedDate, requiredDate, shipCountry
+from customers as cus
+join orders as ords
+on cus.customerID = ords.customerID
+group by shipCountry;
+
+[{$lookup: {
+  from: 'customers',
+  localField: 'customerID',
+  foreignField: 'customerID',
+  as: 'orders_customers'
+}}]
+__________________________________________________________________________
+
+11)select lastName, firstName, title from employees group by title;
+
+[{$project: {
+_id:0, lastName:1, firstName:1, title:1
+}}, {$group: {
+  _id: '$title'
+}}]
+
+
+___________________________________________________________________________
+
+11)OBTEN EL EMPLOYEEID (NOMBRE,TITLE,HIREDATE,REGION) Y SU NUMERO DE TERRITORIO     TABLA employee_territories.csv + employees.csv
+
+[{$project: {
+  _id:0, lastName:1, firstName:1, title:1,
+}}, {$lookup: 
+
+{
+  from: 'territories',
+  localField: 'employeeID',
+  foreignField: 'employeeID',
+  as: 'employee_territories'
+}}, {$addFields: {
+  employee_territories: {$arrayElemAt:
+  ['$employee_territories', 18]
+  }
+}}]
+_______________________________________________________________________________________________________________
+
+12)OBTEN EL EMPLOYEEID (NOMBRE, ADDRESS, COUNTRY, TITLE) Y SU ORDERDATE,SHIPNAME, SHIPVIA    TABLA employees.csv+orders.csv
+
+[{$lookup: {
+  from: 'employees',
+  localField: 'employeeID',
+  foreignField: 'employeeID',
+  as: 'order_employee'
+}}, {$project: {
+_id:0, orderID:1, employeeIDID:1, order_employee:1
+}}]
+__________________________________________________________________________________
+
+13)OBTEN EL CUSTOMERID(CONTACTNAME,CITY,COUNTRY) Y ORDERID, REQUIREDDATE,SHIPNAME   TABLA orders.csv + customers.csv
+
+[{$project: 
+{
+  _id:0,
+}
+}, {$lookup: {
+  from: 'order_details',
+  localField: 'orderID',
+  foreignField: 'orderID',
+  as: 'orders_orders'
+}
+
+}]
+
+______________________________________________________________________________________
+
+14)#ID DE EMPLEADO QUE LE VENDE A CLIENTES (Y EN QUÉ POR PAISES)  tabla customers + orders
+
+[{$project: 
+{
+  _id:0,
+}
+}, {$lookup: {
+  from: 'customers',
+  localField: 'customerID',
+  foreignField: 'customerID',
+  as: 'orders_customer'
+}}]
+
+
+____________________________________________________________________________________
+
+14)DEFINE UNA VISTA (MUESTRE ANTIGUEDAD DEL EMPLEADO Y DATOS GENERALES Y A QUIEN LE VENDE)
+
+[{$project: {
+  _id: 0
+}}, {$lookup: {
+  from: 'orders',
+  localField: 'employeeID',
+  foreignField: 'employeeID',
+  as: 'orders_employees'
+}}]
+
+
+______________________________________________________________--
+
+15) select lastName, firstName, territoryDescription, regionDescription
+from employees as empl
+Join territories as terri
+on empl.employeeID = terri.regionID
+join regions as rg
+on rg.regionID = terri.regionID;
+
+[{$project: {
+  _id:0
+}}, {$lookup: {
+  from: 'employees',
+  localField: 'regionID',
+  foreignField: 'employeeID',
+  as: 'territories_employees'
+}}]
+
